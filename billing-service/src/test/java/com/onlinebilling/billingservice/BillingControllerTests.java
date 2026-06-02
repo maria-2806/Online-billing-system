@@ -1,0 +1,140 @@
+package com.onlinebilling.billingservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.annotation.DirtiesContext;
+
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+class BillingControllerTests {
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    @LocalServerPort
+    private int port;
+
+    @Test
+    void createInvoiceReturnsCalculatedTotals() throws Exception {
+        HttpResponse<String> response = sendPost("/api/billing/invoices", """
+                {
+                  "customerId": 1,
+                  "amount": 100.00
+                }
+                """);
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(response.body()).contains("\"customerId\":1");
+        assertThat(response.body()).contains("\"customerName\":\"John Doe\"");
+        assertThat(response.body()).contains("\"status\":\"ISSUED\"");
+        assertThat(extractBigDecimal(response.body(), "subtotal")).isEqualByComparingTo("100.00");
+        assertThat(extractBigDecimal(response.body(), "tax")).isEqualByComparingTo("18.00");
+        assertThat(extractBigDecimal(response.body(), "total")).isEqualByComparingTo("118.00");
+    }
+
+    @Test
+    void processPaymentMarksInvoicePaidWhenFullySettled() throws Exception {
+        HttpResponse<String> invoiceResponse = sendPost("/api/billing/invoices", """
+                {
+                  "customerId": 2,
+                  "amount": 250.00
+                }
+                """);
+
+        long billId = extractLong(invoiceResponse.body(), "billId");
+
+        HttpResponse<String> paymentResponse = sendPost("/api/billing/payments", """
+                {
+                  "billId": %d,
+                  "amount": 295.00,
+                  "method": "UPI"
+                }
+                """.formatted(billId));
+
+        assertThat(paymentResponse.statusCode()).isEqualTo(200);
+        assertThat(paymentResponse.body()).contains("\"status\":\"SUCCESS\"");
+        assertThat(extractBigDecimal(paymentResponse.body(), "amountPaid")).isEqualByComparingTo("295.00");
+        assertThat(extractBigDecimal(paymentResponse.body(), "remainingBalance")).isEqualByComparingTo("0.00");
+
+        HttpResponse<String> statusResponse = sendGet("/api/billing/invoices/%d/status".formatted(billId));
+        assertThat(statusResponse.statusCode()).isEqualTo(200);
+        assertThat(statusResponse.body()).contains("\"status\":\"PAID\"");
+    }
+
+    @Test
+    void customerSummaryReflectsCreatedInvoicesAndPayments() throws Exception {
+        HttpResponse<String> invoiceResponse = sendPost("/api/billing/invoices", """
+                {
+                  "customerId": 1,
+                  "amount": 150.00
+                }
+                """);
+
+        long billId = extractLong(invoiceResponse.body(), "billId");
+
+        HttpResponse<String> paymentResponse = sendPost("/api/billing/payments", """
+                {
+                  "billId": %d,
+                  "amount": 177.00,
+                  "method": "CARD"
+                }
+                """.formatted(billId));
+
+        assertThat(paymentResponse.statusCode()).isEqualTo(200);
+
+        HttpResponse<String> summaryResponse = sendGet("/api/billing/customers/1/summary");
+        assertThat(summaryResponse.statusCode()).isEqualTo(200);
+        assertThat(summaryResponse.body()).contains("\"customerName\":\"John Doe\"");
+        assertThat(extractLong(summaryResponse.body(), "totalBills")).isEqualTo(1L);
+        assertThat(extractLong(summaryResponse.body(), "paidBills")).isEqualTo(1L);
+        assertThat(extractLong(summaryResponse.body(), "pendingBills")).isEqualTo(0L);
+        assertThat(extractBigDecimal(summaryResponse.body(), "totalBilled")).isEqualByComparingTo("177.00");
+    }
+
+    private HttpResponse<String> sendPost(String path, String body) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + path))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    }
+
+    private HttpResponse<String> sendGet(String path) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + port + path))
+                .GET()
+                .build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    }
+
+    private long extractLong(String body, String fieldName) {
+        Pattern pattern = Pattern.compile("\\\"" + fieldName + "\\\"\\s*:\\s*(\\d+)");
+        Matcher matcher = pattern.matcher(body);
+        if (!matcher.find()) {
+            throw new IllegalStateException("Unable to extract field: " + fieldName + " from body: " + body);
+        }
+        return Long.parseLong(matcher.group(1));
+    }
+
+    private BigDecimal extractBigDecimal(String body, String fieldName) {
+        Pattern pattern = Pattern.compile("\\\"" + fieldName + "\\\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)");
+        Matcher matcher = pattern.matcher(body);
+        if (!matcher.find()) {
+            throw new IllegalStateException("Unable to extract field: " + fieldName + " from body: " + body);
+        }
+        return new BigDecimal(matcher.group(1));
+    }
+}
