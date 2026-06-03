@@ -6,6 +6,7 @@ import com.example.billingservice.model.BillStatus;
 import com.example.billingservice.model.CustomerRecord;
 import com.example.billingservice.model.PaymentRecord;
 import com.example.billingservice.model.PaymentStatus;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
@@ -108,6 +109,8 @@ public class RestDataPoolClient implements DataPoolClient {
                 return BillStatus.DRAFT;
             case "OVERDUE":
                 return BillStatus.OVERDUE;
+            case "PARTIALLY_PAID":
+                return BillStatus.PARTIALLY_PAID;
             default:
                 return BillStatus.ISSUED;
         }
@@ -124,12 +127,15 @@ public class RestDataPoolClient implements DataPoolClient {
                 return "PAID";
             case CANCELLED:
                 return "CANCELLED";
+            case PARTIALLY_PAID:
+                return "PARTIALLY_PAID";
             default:
                 return status.name();
         }
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getCustomerFallback")
     public CustomerRecord getCustomer(long customerId) {
         try {
             CustomerDto dto = restTemplate.getForObject(baseUrl + "/customers/" + customerId, CustomerDto.class);
@@ -143,6 +149,7 @@ public class RestDataPoolClient implements DataPoolClient {
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getBillFallback")
     public BillRecord getBill(long billId) {
         try {
             BillDto dto = restTemplate.getForObject(baseUrl + "/bills/" + billId, BillDto.class);
@@ -156,6 +163,7 @@ public class RestDataPoolClient implements DataPoolClient {
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "saveBillFallback")
     public BillRecord saveBill(BillRecord billRecord) {
         String url = baseUrl + "/bills?customerId=" + billRecord.customerId();
         HttpHeaders headers = new HttpHeaders();
@@ -180,6 +188,7 @@ public class RestDataPoolClient implements DataPoolClient {
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "updateBillStatusFallback")
     public BillRecord updateBillStatus(long billId, BillStatus billStatus) {
         String url = baseUrl + "/bills/" + billId;
         HttpHeaders headers = new HttpHeaders();
@@ -207,6 +216,7 @@ public class RestDataPoolClient implements DataPoolClient {
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getBillsForCustomerFallback")
     public List<BillRecord> getBillsForCustomer(long customerId) {
         String url = baseUrl + "/bills?customerId=" + customerId;
         try {
@@ -223,6 +233,7 @@ public class RestDataPoolClient implements DataPoolClient {
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "savePaymentFallback")
     public PaymentRecord savePayment(PaymentRecord paymentRecord) {
         String url = baseUrl + "/payments?billId=" + paymentRecord.billId();
         HttpHeaders headers = new HttpHeaders();
@@ -248,6 +259,7 @@ public class RestDataPoolClient implements DataPoolClient {
     }
 
     @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getPaymentsForBillFallback")
     public List<PaymentRecord> getPaymentsForBill(long billId) {
         String url = baseUrl + "/payments?billId=" + billId;
         try {
@@ -261,5 +273,52 @@ public class RestDataPoolClient implements DataPoolClient {
         } catch (Exception e) {
             return Collections.emptyList();
         }
+    }
+
+    // --- Fallback Methods ---
+
+    public CustomerRecord getCustomerFallback(long customerId, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public BillRecord getBillFallback(long billId, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public BillRecord saveBillFallback(BillRecord billRecord, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public BillRecord updateBillStatusFallback(long billId, BillStatus billStatus, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public List<BillRecord> getBillsForCustomerFallback(long customerId, Throwable t) {
+        handleFallbackException(t);
+        return Collections.emptyList();
+    }
+
+    public PaymentRecord savePaymentFallback(PaymentRecord paymentRecord, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public List<PaymentRecord> getPaymentsForBillFallback(long billId, Throwable t) {
+        handleFallbackException(t);
+        return Collections.emptyList();
+    }
+
+    private void handleFallbackException(Throwable t) {
+        if (t instanceof DomainException) {
+            throw (DomainException) t;
+        }
+        throw new DomainException(
+                "DATABASE_SERVICE_UNAVAILABLE",
+                "Data Pool Service is temporarily offline. Details: " + t.getMessage()
+        );
     }
 }

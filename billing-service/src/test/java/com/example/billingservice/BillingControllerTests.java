@@ -105,6 +105,60 @@ class BillingControllerTests {
         assertThat(extractBigDecimal(summaryResponse.body(), "totalBilled")).isEqualByComparingTo("177.00");
     }
 
+    @Test
+    void partialPaymentsTransitionStatusCorrectly() throws Exception {
+        HttpResponse<String> invoiceResponse = sendPost("/api/billing/invoices", """
+                {
+                  "customerId": 1,
+                  "amount": 100.00
+                }
+                """);
+
+        long billId = extractLong(invoiceResponse.body(), "billId");
+
+        HttpResponse<String> paymentResponse1 = sendPost("/api/billing/payments", """
+                {
+                  "billId": %d,
+                  "amount": 50.00,
+                  "method": "CARD"
+                }
+                """.formatted(billId));
+
+        assertThat(paymentResponse1.statusCode()).isEqualTo(200);
+        assertThat(paymentResponse1.body()).contains("\"status\":\"SUCCESS\"");
+        assertThat(extractBigDecimal(paymentResponse1.body(), "amountPaid")).isEqualByComparingTo("50.00");
+        assertThat(extractBigDecimal(paymentResponse1.body(), "remainingBalance")).isEqualByComparingTo("68.00");
+
+        HttpResponse<String> statusResponse1 = sendGet("/api/billing/invoices/%d/status".formatted(billId));
+        assertThat(statusResponse1.statusCode()).isEqualTo(200);
+        assertThat(statusResponse1.body()).contains("\"status\":\"PARTIALLY_PAID\"");
+
+        HttpResponse<String> paymentResponse2 = sendPost("/api/billing/payments", """
+                {
+                  "billId": %d,
+                  "amount": 68.00,
+                  "method": "UPI"
+                }
+                """.formatted(billId));
+
+        assertThat(paymentResponse2.statusCode()).isEqualTo(200);
+        assertThat(extractBigDecimal(paymentResponse2.body(), "remainingBalance")).isEqualByComparingTo("0.00");
+
+        HttpResponse<String> statusResponse2 = sendGet("/api/billing/invoices/%d/status".formatted(billId));
+        assertThat(statusResponse2.statusCode()).isEqualTo(200);
+        assertThat(statusResponse2.body()).contains("\"status\":\"PAID\"");
+
+        HttpResponse<String> paymentResponse3 = sendPost("/api/billing/payments", """
+                {
+                  "billId": %d,
+                  "amount": 10.00,
+                  "method": "CARD"
+                }
+                """.formatted(billId));
+        assertThat(paymentResponse3.statusCode()).isEqualTo(400);
+        assertThat(paymentResponse3.body()).contains("\"code\":\"BILL_ALREADY_PAID\"");
+    }
+
     private HttpResponse<String> sendPost(String path, String body) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + path))

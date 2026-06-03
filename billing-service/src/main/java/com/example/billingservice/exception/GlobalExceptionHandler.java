@@ -12,7 +12,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<ErrorResponse> handleDomainException(DomainException exception) {
-        HttpStatus status = exception.getCode().endsWith("NOT_FOUND") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+        HttpStatus status;
+        if ("DATABASE_SERVICE_UNAVAILABLE".equals(exception.getCode())) {
+            status = HttpStatus.SERVICE_UNAVAILABLE;
+        } else if (exception.getCode().endsWith("NOT_FOUND")) {
+            status = HttpStatus.NOT_FOUND;
+        } else {
+            status = HttpStatus.BAD_REQUEST;
+        }
         return ResponseEntity.status(status).body(new ErrorResponse(exception.getCode(), exception.getMessage()));
     }
 

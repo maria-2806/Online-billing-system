@@ -160,6 +160,7 @@ Purpose: return the current invoice or bill status.
 
 - `DRAFT`
 - `ISSUED`
+- `PARTIALLY_PAID`
 - `PAID`
 - `OVERDUE`
 - `CANCELLED`

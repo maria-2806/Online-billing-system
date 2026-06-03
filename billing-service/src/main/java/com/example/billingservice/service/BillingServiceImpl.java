@@ -61,7 +61,28 @@ public class BillingServiceImpl implements BillingService {
     @Override
     public PaymentResponse processPayment(ProcessPaymentRequest request) {
         BillRecord bill = dataPoolClient.getBill(request.billId());
+        
+        if (bill.status() == BillStatus.PAID) {
+            throw new DomainException(
+                    "BILL_ALREADY_PAID",
+                    "This bill has already been fully paid"
+            );
+        }
+        if (bill.status() == BillStatus.CANCELLED) {
+            throw new DomainException(
+                    "BILL_CANCELLED",
+                    "Cannot process payment for a cancelled bill"
+            );
+        }
+
         BigDecimal paymentAmount = scaleMoney(request.amount());
+        if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new DomainException(
+                    "INVALID_PAYMENT_AMOUNT",
+                    "Payment amount must be greater than zero"
+            );
+        }
+
         BigDecimal paidSoFar = sumPayments(dataPoolClient.getPaymentsForBill(bill.id()));
         BigDecimal remainingBeforePayment = scaleMoney(bill.total().subtract(paidSoFar));
 
@@ -83,6 +104,8 @@ public class BillingServiceImpl implements BillingService {
         BigDecimal remainingAfterPayment = scaleMoney(remainingBeforePayment.subtract(paymentAmount));
         if (remainingAfterPayment.compareTo(BigDecimal.ZERO) == 0) {
             dataPoolClient.updateBillStatus(bill.id(), BillStatus.PAID);
+        } else {
+            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PARTIALLY_PAID);
         }
 
         return new PaymentResponse(

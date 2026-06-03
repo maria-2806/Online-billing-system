@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-@Profile("mock")
 @Component
+@Profile("mock")
 public class InMemoryDataPoolClient implements DataPoolClient {
 
     private final Map<Long, CustomerRecord> customers = new LinkedHashMap<>();
