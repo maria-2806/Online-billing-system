@@ -114,4 +114,33 @@ public class InMemoryDataPoolClient implements DataPoolClient {
         }
         return billPayments;
     }
+
+    @Override
+    public List<CustomerRecord> getAllCustomers() {
+        return new ArrayList<>(customers.values());
+    }
+
+    @Override
+    public CustomerRecord saveCustomer(CustomerRecord customerRecord) {
+        long customerId = customers.size() + 1;
+        CustomerRecord storedCustomer = new CustomerRecord(customerId, customerRecord.name(), customerRecord.email());
+        customers.put(customerId, storedCustomer);
+        return storedCustomer;
+    }
+
+    @Override
+    public CustomerRecord updateCustomer(long customerId, CustomerRecord customerRecord) {
+        CustomerRecord existing = customers.get(customerId);
+        if (existing == null) {
+            throw new DomainException("CUSTOMER_NOT_FOUND", "Customer with id %s was not found".formatted(customerId));
+        }
+        CustomerRecord updated = new CustomerRecord(customerId, customerRecord.name(), customerRecord.email());
+        customers.put(customerId, updated);
+        return updated;
+    }
+
+    @Override
+    public List<BillRecord> getAllBills() {
+        return new ArrayList<>(bills.values());
+    }
 }

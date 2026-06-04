@@ -321,4 +321,101 @@ public class RestDataPoolClient implements DataPoolClient {
                 "Data Pool Service is temporarily offline. Details: " + t.getMessage()
         );
     }
+
+    @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getAllCustomersFallback")
+    public List<CustomerRecord> getAllCustomers() {
+        String url = baseUrl + "/customers";
+        try {
+            CustomerDto[] dtos = restTemplate.getForObject(url, CustomerDto[].class);
+            if (dtos == null) {
+                return Collections.emptyList();
+            }
+            return Arrays.stream(dtos)
+                    .map(this::toCustomerRecord)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "saveCustomerFallback")
+    public CustomerRecord saveCustomer(CustomerRecord customerRecord) {
+        String url = baseUrl + "/customers";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        CustomerDto requestBody = new CustomerDto(null, customerRecord.name(), customerRecord.email());
+        HttpEntity<CustomerDto> requestEntity = new HttpEntity<>(requestBody, headers);
+        
+        try {
+            CustomerDto dto = restTemplate.postForObject(url, requestEntity, CustomerDto.class);
+            return toCustomerRecord(dto);
+        } catch (HttpClientErrorException.BadRequest e) {
+            throw new DomainException("INVALID_CUSTOMER_DATA", "Failed to save customer: " + e.getResponseBodyAsString());
+        }
+    }
+
+    @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "updateCustomerFallback")
+    public CustomerRecord updateCustomer(long customerId, CustomerRecord customerRecord) {
+        String url = baseUrl + "/customers/" + customerId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        CustomerDto requestBody = new CustomerDto(null, customerRecord.name(), customerRecord.email());
+        HttpEntity<CustomerDto> requestEntity = new HttpEntity<>(requestBody, headers);
+        
+        try {
+            ResponseEntity<CustomerDto> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.PUT,
+                    requestEntity,
+                    CustomerDto.class
+            );
+            return toCustomerRecord(response.getBody());
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new DomainException("CUSTOMER_NOT_FOUND", "Customer with id " + customerId + " was not found");
+        }
+    }
+
+    @Override
+    @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getAllBillsFallback")
+    public List<BillRecord> getAllBills() {
+        String url = baseUrl + "/bills";
+        try {
+            BillDto[] dtos = restTemplate.getForObject(url, BillDto[].class);
+            if (dtos == null) {
+                return Collections.emptyList();
+            }
+            return Arrays.stream(dtos)
+                    .map(dto -> toBillRecord(dto))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    // --- New Fallback Methods ---
+
+    public List<CustomerRecord> getAllCustomersFallback(Throwable t) {
+        handleFallbackException(t);
+        return Collections.emptyList();
+    }
+
+    public CustomerRecord saveCustomerFallback(CustomerRecord customerRecord, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public CustomerRecord updateCustomerFallback(long customerId, CustomerRecord customerRecord, Throwable t) {
+        handleFallbackException(t);
+        return null;
+    }
+
+    public List<BillRecord> getAllBillsFallback(Throwable t) {
+        handleFallbackException(t);
+        return Collections.emptyList();
+    }
 }

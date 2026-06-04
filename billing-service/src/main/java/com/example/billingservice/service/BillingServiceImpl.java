@@ -157,4 +157,29 @@ public class BillingServiceImpl implements BillingService {
     private BigDecimal scaleMoney(BigDecimal amount) {
         return amount.setScale(2, RoundingMode.HALF_UP);
     }
+
+    @Override
+    public List<CustomerRecord> getAllCustomers() {
+        return dataPoolClient.getAllCustomers();
+    }
+
+    @Override
+    public CustomerRecord createCustomer(CustomerRecord customer) {
+        return dataPoolClient.saveCustomer(customer);
+    }
+
+    @Override
+    public CustomerRecord updateCustomer(long id, CustomerRecord customer) {
+        return dataPoolClient.updateCustomer(id, customer);
+    }
+
+    @Override
+    public List<BillRecord> getAllBills() {
+        return dataPoolClient.getAllBills();
+    }
+
+    @Override
+    public List<PaymentRecord> getPaymentsForBill(long billId) {
+        return dataPoolClient.getPaymentsForBill(billId);
+    }
 }

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Online Billing System</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Online Billing</h1>
+                <p>Sign in to access your administrative dashboard</p>
+            </div>
+            
+            <div id="alertContainer"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">USERNAME</label>
+                    <input type="text" id="username" class="form-control" placeholder="Enter admin username" required autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">PASSWORD</label>
+                    <input type="password" id="password" class="form-control" placeholder="Enter password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                    Sign In
+                </button>
+            </form>
+            
+            <div style="margin-top: 24px; text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
+                Default credentials: <code style="color: var(--accent-indigo); font-weight: 600;">admin / admin123</code>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if already logged in, redirect directly to dashboard
+        if (localStorage.getItem("isLoggedIn") === "true") {
+            window.location.href = "dashboard.html";
+        }
+
+        document.getElementById("loginForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            
+            const u = document.getElementById("username").value.trim();
+            const p = document.getElementById("password").value.trim();
+            const alertContainer = document.getElementById("alertContainer");
+            
+            if (u === "admin" && p === "admin123") {
+                localStorage.setItem("isLoggedIn", "true");
+                localStorage.setItem("userRole", "Administrator");
+                window.location.href = "dashboard.html";
+            } else {
+                alertContainer.innerHTML = `
+                    <div style="background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.25); padding: 12px 16px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; text-align: center; font-weight: 500;">
+                        Invalid username or password. Please try again.
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -3,8 +3,8 @@
 The Data Pool Service exposes REST API endpoints to perform CRUD and querying operations on Customers, Bills, and Payments. It interfaces directly with the local MySQL database.
 
 ## Base URL
-By default, the service runs on port `8080`:
-`http://localhost:8080`
+By default, the service runs on port `8082`:
+`http://localhost:8082`
 
 All requests should use `Content-Type: application_json` for request bodies.
 
