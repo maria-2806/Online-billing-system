@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.example.billingservice.model.CustomerRecord;
 import com.example.billingservice.model.BillRecord;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/api/billing")
 public class BillingController {
@@ -37,6 +39,13 @@ public class BillingController {
     @PostMapping("/invoices")
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
         InvoiceResponse response = billingService.createInvoice(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/customers")
+    public ResponseEntity<com.example.billingservice.model.CustomerRecord> createCustomer(@Valid @RequestBody com.example.billingservice.dto.request.CreateCustomerRequest request) {
+        com.example.billingservice.model.CustomerRecord newCustomer = new com.example.billingservice.model.CustomerRecord(null, request.name(), request.email(), request.phone());
+        com.example.billingservice.model.CustomerRecord response = billingService.createCustomer(newCustomer);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

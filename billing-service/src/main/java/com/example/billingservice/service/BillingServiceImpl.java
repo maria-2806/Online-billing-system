@@ -103,9 +103,9 @@ public class BillingServiceImpl implements BillingService {
 
         BigDecimal remainingAfterPayment = scaleMoney(remainingBeforePayment.subtract(paymentAmount));
         if (remainingAfterPayment.compareTo(BigDecimal.ZERO) == 0) {
-            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PAID);
+            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PAID, java.time.LocalDateTime.now());
         } else {
-            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PARTIALLY_PAID);
+            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PARTIALLY_PAID, null);
         }
 
         return new PaymentResponse(

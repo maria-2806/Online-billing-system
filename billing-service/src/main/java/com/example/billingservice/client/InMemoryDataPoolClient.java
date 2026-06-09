@@ -25,8 +25,8 @@ public class InMemoryDataPoolClient implements DataPoolClient {
     private final AtomicLong paymentSequence = new AtomicLong(500L);
 
     public InMemoryDataPoolClient() {
-        customers.put(1L, new CustomerRecord(1L, "John Doe", "john.doe@example.com"));
-        customers.put(2L, new CustomerRecord(2L, "Jane Smith", "jane.smith@example.com"));
+        customers.put(1L, new CustomerRecord(1L, "John Doe", "john.doe@example.com", "1234567890"));
+        customers.put(2L, new CustomerRecord(2L, "Jane Smith", "jane.smith@example.com", "0987654321"));
     }
 
     @Override
@@ -64,7 +64,7 @@ public class InMemoryDataPoolClient implements DataPoolClient {
     }
 
     @Override
-    public BillRecord updateBillStatus(long billId, BillStatus billStatus) {
+    public BillRecord updateBillStatus(long billId, BillStatus billStatus, java.time.LocalDateTime paidAt) {
         BillRecord existingBill = getBill(billId);
         BillRecord updatedBill = new BillRecord(
                 existingBill.id(),
@@ -123,7 +123,7 @@ public class InMemoryDataPoolClient implements DataPoolClient {
     @Override
     public CustomerRecord saveCustomer(CustomerRecord customerRecord) {
         long customerId = customers.size() + 1;
-        CustomerRecord storedCustomer = new CustomerRecord(customerId, customerRecord.name(), customerRecord.email());
+        CustomerRecord storedCustomer = new CustomerRecord(customerId, customerRecord.name(), customerRecord.email(), customerRecord.phone());
         customers.put(customerId, storedCustomer);
         return storedCustomer;
     }
@@ -134,7 +134,7 @@ public class InMemoryDataPoolClient implements DataPoolClient {
         if (existing == null) {
             throw new DomainException("CUSTOMER_NOT_FOUND", "Customer with id %s was not found".formatted(customerId));
         }
-        CustomerRecord updated = new CustomerRecord(customerId, customerRecord.name(), customerRecord.email());
+        CustomerRecord updated = new CustomerRecord(customerId, customerRecord.name(), customerRecord.email(), customerRecord.phone());
         customers.put(customerId, updated);
         return updated;
     }

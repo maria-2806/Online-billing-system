@@ -5,6 +5,7 @@ import com.example.billingservice.model.BillStatus;
 import com.example.billingservice.model.CustomerRecord;
 import com.example.billingservice.model.PaymentRecord;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface DataPoolClient {
@@ -15,7 +16,7 @@ public interface DataPoolClient {
 
     BillRecord saveBill(BillRecord billRecord);
 
-    BillRecord updateBillStatus(long billId, BillStatus billStatus);
+    BillRecord updateBillStatus(long billId, BillStatus billStatus, LocalDateTime paidAt);
 
     List<BillRecord> getBillsForCustomer(long customerId);
 

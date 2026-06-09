@@ -37,10 +37,9 @@ public class RestDataPoolClient implements DataPoolClient {
         this.baseUrl = baseUrl;
     }
 
-    // Helper records for JSON serialization/deserialization to avoid importing datapool-service entities
-    private record CustomerDto(Long id, String name, String email) {}
+    private record CustomerDto(Long id, String name, String email, String phone) {}
 
-    private record BillDto(Long id, CustomerDto customer, BigDecimal amount, String status) {}
+    private record BillDto(Long id, CustomerDto customer, BigDecimal amount, String status, java.time.LocalDateTime paidAt) {}
 
     private record BillIdDto(Long id) {}
 
@@ -48,7 +47,7 @@ public class RestDataPoolClient implements DataPoolClient {
 
     private CustomerRecord toCustomerRecord(CustomerDto dto) {
         if (dto == null) return null;
-        return new CustomerRecord(dto.id(), dto.name(), dto.email());
+        return new CustomerRecord(dto.id(), dto.name(), dto.email(), dto.phone());
     }
 
     private BillRecord toBillRecord(BillDto dto) {
@@ -173,7 +172,8 @@ public class RestDataPoolClient implements DataPoolClient {
                 null,
                 null,
                 billRecord.total(),
-                mapStatusToEntity(billRecord.status())
+                mapStatusToEntity(billRecord.status()),
+                null
         );
         
         HttpEntity<BillDto> requestEntity = new HttpEntity<>(requestBody, headers);
@@ -189,7 +189,7 @@ public class RestDataPoolClient implements DataPoolClient {
 
     @Override
     @CircuitBreaker(name = "datapoolClient", fallbackMethod = "updateBillStatusFallback")
-    public BillRecord updateBillStatus(long billId, BillStatus billStatus) {
+    public BillRecord updateBillStatus(long billId, BillStatus billStatus, java.time.LocalDateTime paidAt) {
         String url = baseUrl + "/bills/" + billId;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -198,7 +198,8 @@ public class RestDataPoolClient implements DataPoolClient {
                 null,
                 null,
                 null,
-                mapStatusToEntity(billStatus)
+                mapStatusToEntity(billStatus),
+                paidAt
         );
         
         HttpEntity<BillDto> requestEntity = new HttpEntity<>(requestBody, headers);
@@ -346,7 +347,7 @@ public class RestDataPoolClient implements DataPoolClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         
-        CustomerDto requestBody = new CustomerDto(null, customerRecord.name(), customerRecord.email());
+        CustomerDto requestBody = new CustomerDto(null, customerRecord.name(), customerRecord.email(), customerRecord.phone());
         HttpEntity<CustomerDto> requestEntity = new HttpEntity<>(requestBody, headers);
         
         try {
@@ -364,7 +365,7 @@ public class RestDataPoolClient implements DataPoolClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         
-        CustomerDto requestBody = new CustomerDto(null, customerRecord.name(), customerRecord.email());
+        CustomerDto requestBody = new CustomerDto(null, customerRecord.name(), customerRecord.email(), customerRecord.phone());
         HttpEntity<CustomerDto> requestEntity = new HttpEntity<>(requestBody, headers);
         
         try {
