@@ -1,6 +1,7 @@
 package com.example.billingservice.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record BillRecord(
         Long id,
@@ -9,6 +10,8 @@ public record BillRecord(
         BigDecimal subtotal,
         BigDecimal tax,
         BigDecimal total,
-        BillStatus status
+        BillStatus status,
+        LocalDateTime createdAt,
+        LocalDateTime paidAt
 ) {
 }

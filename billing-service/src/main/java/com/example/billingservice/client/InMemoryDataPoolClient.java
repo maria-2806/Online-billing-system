@@ -57,7 +57,9 @@ public class InMemoryDataPoolClient implements DataPoolClient {
                 billRecord.subtotal(),
                 billRecord.tax(),
                 billRecord.total(),
-                billRecord.status()
+                billRecord.status(),
+                billRecord.createdAt() != null ? billRecord.createdAt() : java.time.LocalDateTime.now(),
+                billRecord.paidAt()
         );
         bills.put(billId, storedBill);
         return storedBill;
@@ -73,7 +75,9 @@ public class InMemoryDataPoolClient implements DataPoolClient {
                 existingBill.subtotal(),
                 existingBill.tax(),
                 existingBill.total(),
-                billStatus
+                billStatus,
+                existingBill.createdAt(),
+                paidAt
         );
         bills.put(billId, updatedBill);
         return updatedBill;
@@ -98,17 +102,21 @@ public class InMemoryDataPoolClient implements DataPoolClient {
                 paymentRecord.billId(),
                 paymentRecord.amountPaid(),
                 paymentRecord.method(),
-                paymentRecord.status()
+                paymentRecord.status(),
+                paymentRecord.paymentDate() != null ? paymentRecord.paymentDate() : java.time.LocalDateTime.now()
         );
         payments.put(paymentId, storedPayment);
         return storedPayment;
     }
 
     @Override
-    public List<PaymentRecord> getPaymentsForBill(long billId) {
+    public List<PaymentRecord> getPaymentsForBill(Long billId) {
+        if (billId == null) {
+            return new ArrayList<>(payments.values());
+        }
         List<PaymentRecord> billPayments = new ArrayList<>();
         for (PaymentRecord paymentRecord : payments.values()) {
-            if (paymentRecord.billId() == billId) {
+            if (paymentRecord.billId().equals(billId)) {
                 billPayments.add(paymentRecord);
             }
         }

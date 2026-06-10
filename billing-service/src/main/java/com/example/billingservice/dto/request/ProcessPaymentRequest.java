@@ -17,7 +17,7 @@ public record ProcessPaymentRequest(
         BigDecimal amount,
 
         @NotBlank(message = "method is required")
-        @Pattern(regexp = "^(CREDIT_CARD|BANK_TRANSFER|CASH|PAYPAL)$", message = "method must be one of: CREDIT_CARD, BANK_TRANSFER, CASH, PAYPAL")
+        @Pattern(regexp = "^(CREDIT_CARD|DEBIT_CARD|UPI|BANK_TRANSFER|CASH|PAYPAL|CARD)$", message = "method must be one of: CREDIT_CARD, DEBIT_CARD, UPI, BANK_TRANSFER, CASH, PAYPAL, CARD")
         String method
 ) {
 }

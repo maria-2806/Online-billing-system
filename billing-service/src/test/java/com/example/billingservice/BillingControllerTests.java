@@ -159,6 +159,63 @@ class BillingControllerTests {
         assertThat(paymentResponse3.body()).contains("\"code\":\"BILL_ALREADY_PAID\"");
     }
 
+    @Test
+    void customerCreationValidatesNameNoNumbers() throws Exception {
+        HttpResponse<String> response = sendPost("/api/billing/customers", """
+                {
+                  "name": "John123 Doe",
+                  "email": "john.doe@gmail.com",
+                  "phone": "1234567890"
+                }
+                """);
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body()).contains("\"code\":\"VALIDATION_ERROR\"");
+        assertThat(response.body()).contains("name must contain only alphabetic characters");
+    }
+
+    @Test
+    void customerCreationValidatesGmailOnly() throws Exception {
+        HttpResponse<String> response = sendPost("/api/billing/customers", """
+                {
+                  "name": "John Doe",
+                  "email": "john.doe@yahoo.com",
+                  "phone": "1234567890"
+                }
+                """);
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body()).contains("\"code\":\"VALIDATION_ERROR\"");
+        assertThat(response.body()).contains("email must be a valid Gmail address");
+    }
+
+    @Test
+    void customerCreationValidatesGmailHasLetters() throws Exception {
+        HttpResponse<String> response = sendPost("/api/billing/customers", """
+                {
+                  "name": "John Doe",
+                  "email": "123@gmail.com",
+                  "phone": "1234567890"
+                }
+                """);
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(response.body()).contains("\"code\":\"VALIDATION_ERROR\"");
+        assertThat(response.body()).contains("email must be a valid Gmail address containing at least one letter");
+    }
+    
+    @Test
+    void customerCreationPassesWithValidData() throws Exception {
+        HttpResponse<String> response = sendPost("/api/billing/customers", """
+                {
+                  "name": "Jane Doe",
+                  "email": "jane.doe@gmail.com",
+                  "phone": "1234567890"
+                }
+                """);
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(response.body()).contains("\"name\":\"Jane Doe\"");
+        assertThat(response.body()).contains("\"email\":\"jane.doe@gmail.com\"");
+        assertThat(response.body()).contains("\"phone\":\"1234567890\"");
+    }
+
     private HttpResponse<String> sendPost(String path, String body) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + path))

@@ -30,4 +30,7 @@ public class Payment {
 
     @Column(nullable = false)
     private String status; // SUCCESS, FAILED, PENDING
+
+    @Column(name = "payment_date")
+    private java.time.LocalDateTime paymentDate;
 }

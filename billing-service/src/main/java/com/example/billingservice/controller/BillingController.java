@@ -69,14 +69,9 @@ public class BillingController {
         return billingService.getAllCustomers();
     }
 
-    @PostMapping("/customers")
-    public ResponseEntity<CustomerRecord> createCustomer(@Valid @RequestBody CustomerRecord customer) {
-        CustomerRecord created = billingService.createCustomer(customer);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
     @PutMapping("/customers/{id}")
-    public CustomerRecord updateCustomer(@PathVariable long id, @Valid @RequestBody CustomerRecord customer) {
+    public CustomerRecord updateCustomer(@PathVariable long id, @Valid @RequestBody com.example.billingservice.dto.request.UpdateCustomerRequest request) {
+        CustomerRecord customer = new CustomerRecord(id, request.name(), request.email(), request.phone());
         return billingService.updateCustomer(id, customer);
     }
 
@@ -86,7 +81,7 @@ public class BillingController {
     }
 
     @GetMapping("/payments")
-    public List<PaymentRecord> getPaymentsForBill(@RequestParam long billId) {
+    public List<PaymentRecord> getPaymentsForBill(@RequestParam(required = false) Long billId) {
         return billingService.getPaymentsForBill(billId);
     }
 }

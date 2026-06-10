@@ -100,6 +100,7 @@
                                 <tr>
                                     <th>Bill ID</th>
                                     <th>Customer</th>
+                                    <th>Date Issued</th>
                                     <th>Subtotal</th>
                                     <th>Tax (18%)</th>
                                     <th>Total</th>
@@ -123,6 +124,9 @@
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             Add Customer
                         </button>
+                    </div>
+                    <div class="search-container" style="padding: 0 24px; margin-bottom: 12px;">
+                        <input type="text" id="searchCustomers" class="form-control search-input" placeholder="Search customers by name or email..." oninput="filterCustomersTable()">
                     </div>
                     <div class="table-responsive">
                         <table>
@@ -152,6 +156,9 @@
                             Generate Invoice
                         </button>
                     </div>
+                    <div class="search-container" style="padding: 0 24px; margin-bottom: 12px;">
+                        <input type="text" id="searchInvoices" class="form-control search-input" placeholder="Search invoices by ID, customer name, or status..." oninput="filterInvoicesTable()">
+                    </div>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -159,6 +166,7 @@
                                     <th>Bill ID</th>
                                     <th>Customer ID</th>
                                     <th>Customer Name</th>
+                                    <th>Date Issued</th>
                                     <th>Subtotal</th>
                                     <th>Tax (18%)</th>
                                     <th>Total</th>
@@ -175,57 +183,88 @@
 
             <!-- TAB 4: PAYMENTS -->
             <section id="tab-payments" class="tab-content" style="display: none;">
-                <div class="card" style="max-width: 600px; margin: 0 auto;">
-                    <div class="card-header">
-                        <h2 class="card-title">Record Payment</h2>
-                    </div>
-                    <form id="paymentForm">
-                        <div class="form-group">
-                            <label for="payInvoiceSelect">SELECT INVOICE / BILL</label>
-                            <select id="payInvoiceSelect" class="form-control" required style="background-color: #ffffff;">
-                                <option value="" disabled selected>Select an unpaid invoice</option>
-                            </select>
+                <div class="payments-layout-grid" style="display: grid; grid-template-columns: 1fr; gap: 24px; max-width: 1200px; margin: 0 auto; align-items: start;">
+                    <!-- Record Payment Form -->
+                    <div class="card" style="max-width: 600px; width: 100%; margin: 0 auto;">
+                        <div class="card-header">
+                            <h2 class="card-title">Record Payment</h2>
                         </div>
-                        
-                        <div class="form-group" id="payAmountGroup" style="display: none; margin-bottom: 24px;">
-                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
-                                <div class="calc-row">
-                                    <span>Total Invoice Amount:</span>
-                                    <span id="payTotalInvoiceVal" style="font-weight:600;">$0.00</span>
-                                </div>
-                                <div class="calc-row">
-                                    <span>Amount Already Paid:</span>
-                                    <span id="payAmountPaidVal" style="color: var(--success);">$0.00</span>
-                                </div>
-                                <div class="calc-row total-row">
-                                    <span>Outstanding Balance:</span>
-                                    <span id="payOutstandingVal" style="color: var(--warning); font-size:1.1rem;">$0.00</span>
+                        <form id="paymentForm">
+                            <div class="form-group">
+                                <label for="payInvoiceSelect">SELECT INVOICE / BILL</label>
+                                <select id="payInvoiceSelect" class="form-control" required style="background-color: #ffffff;">
+                                    <option value="" disabled selected>Select an unpaid invoice</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="payAmountGroup" style="display: none; margin-bottom: 24px;">
+                                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                                    <div class="calc-row">
+                                        <span>Total Invoice Amount:</span>
+                                        <span id="payTotalInvoiceVal" style="font-weight:600;">$0.00</span>
+                                    </div>
+                                    <div class="calc-row">
+                                        <span>Amount Already Paid:</span>
+                                        <span id="payAmountPaidVal" style="color: var(--success);">$0.00</span>
+                                    </div>
+                                    <div class="calc-row total-row">
+                                        <span>Outstanding Balance:</span>
+                                        <span id="payOutstandingVal" style="color: var(--warning); font-size:1.1rem;">$0.00</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="form-group">
-                            <label for="payAmount">PAYMENT AMOUNT</label>
-                            <input type="number" step="0.01" id="payAmount" class="form-control" placeholder="0.00" min="0.01" required>
-                            <small style="color: var(--text-secondary); display:block; margin-top:6px;" id="payAmountHint"></small>
-                        </div>
+                            <div class="form-group">
+                                <label for="payAmount">PAYMENT AMOUNT</label>
+                                <input type="number" step="0.01" id="payAmount" class="form-control" placeholder="0.00" min="0.01" required>
+                                <small style="color: var(--text-secondary); display:block; margin-top:6px;" id="payAmountHint"></small>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="payMethod">PAYMENT METHOD</label>
-                            <select id="payMethod" class="form-control" required style="background-color: #ffffff;">
-                                <option value="CREDIT_CARD">Credit Card</option>
-                                <option value="DEBIT_CARD">Debit Card</option>
-                                <option value="UPI">UPI</option>
-                                <option value="PAYPAL">PayPal</option>
-                                <option value="BANK_TRANSFER">Bank Transfer</option>
-                                <option value="CASH">Cash</option>
-                            </select>
-                        </div>
+                            <div class="form-group">
+                                <label for="payMethod">PAYMENT METHOD</label>
+                                <select id="payMethod" class="form-control" required style="background-color: #ffffff;">
+                                    <option value="CREDIT_CARD">Credit Card</option>
+                                    <option value="DEBIT_CARD">Debit Card</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="PAYPAL">PayPal</option>
+                                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                                    <option value="CASH">Cash</option>
+                                </select>
+                            </div>
 
-                        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
-                            Record Transaction
-                        </button>
-                    </form>
+                            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                                Record Transaction
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Payments History Table -->
+                    <div class="card" style="width: 100%;">
+                        <div class="card-header">
+                            <h2 class="card-title">Payments History</h2>
+                        </div>
+                        <div class="search-container" style="margin-bottom: 12px;">
+                            <input type="text" id="searchPayments" class="form-control search-input" placeholder="Search payments by ID, customer name, or method..." oninput="filterPaymentsTable()">
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Payment ID</th>
+                                        <th>Invoice ID</th>
+                                        <th>Customer</th>
+                                        <th>Date/Time</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentsHistoryTable">
+                                    <tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">Loading payment history...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -241,11 +280,15 @@
             <form id="addCustomerForm">
                 <div class="form-group">
                     <label for="custName">CUSTOMER NAME</label>
-                    <input type="text" id="custName" class="form-control" placeholder="John Doe" required>
+                    <input type="text" id="custName" class="form-control" placeholder="John Doe" required pattern="^[a-zA-Z\s'.\-]+$" title="Name must contain only letters, spaces, hyphens, or apostrophes (no numbers)">
                 </div>
                 <div class="form-group">
                     <label for="custEmail">EMAIL ADDRESS</label>
-                    <input type="email" id="custEmail" class="form-control" placeholder="john.doe@example.com" required>
+                    <input type="email" id="custEmail" class="form-control" placeholder="john.doe@gmail.com" required pattern="^(?=[0-9.]*[a-zA-Z])[a-zA-Z0-9.]+@gmail\.com$" title="Email must be a valid Gmail address containing at least one letter (ending with @gmail.com)">
+                </div>
+                <div class="form-group">
+                    <label for="custPhone">PHONE NUMBER</label>
+                    <input type="tel" id="custPhone" class="form-control" placeholder="1234567890" required pattern="^[0-9]{10}$" title="Phone number must be exactly 10 digits">
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addCustomerModal')">Cancel</button>
@@ -266,11 +309,15 @@
                 <input type="hidden" id="editCustId">
                 <div class="form-group">
                     <label for="editCustName">CUSTOMER NAME</label>
-                    <input type="text" id="editCustName" class="form-control" placeholder="John Doe" required>
+                    <input type="text" id="editCustName" class="form-control" placeholder="John Doe" required pattern="^[a-zA-Z\s'.\-]+$" title="Name must contain only letters, spaces, hyphens, or apostrophes (no numbers)">
                 </div>
                 <div class="form-group">
                     <label for="editCustEmail">EMAIL ADDRESS</label>
-                    <input type="email" id="editCustEmail" class="form-control" placeholder="john.doe@example.com" required>
+                    <input type="email" id="editCustEmail" class="form-control" placeholder="john.doe@gmail.com" required pattern="^(?=[0-9.]*[a-zA-Z])[a-zA-Z0-9.]+@gmail\.com$" title="Email must be a valid Gmail address containing at least one letter (ending with @gmail.com)">
+                </div>
+                <div class="form-group">
+                    <label for="editCustPhone">PHONE NUMBER</label>
+                    <input type="tel" id="editCustPhone" class="form-control" placeholder="1234567890" required pattern="^[0-9]{10}$" title="Phone number must be exactly 10 digits">
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editCustomerModal')">Cancel</button>

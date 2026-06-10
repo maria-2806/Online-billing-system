@@ -27,11 +27,15 @@ public class PaymentService {
         if (payment.getStatus() == null) {
             payment.setStatus("PENDING");
         }
+        if (payment.getPaymentDate() == null) {
+            payment.setPaymentDate(java.time.LocalDateTime.now());
+        }
         
         Payment savedPayment = paymentRepository.save(payment);
         
         if ("SUCCESS".equalsIgnoreCase(payment.getStatus())) {
             bill.setStatus("PAID");
+            bill.setPaidAt(payment.getPaymentDate());
             billRepository.save(bill);
         }
         
@@ -58,6 +62,7 @@ public class PaymentService {
             if ("SUCCESS".equalsIgnoreCase(status)) {
                 Bill bill = payment.getBill();
                 bill.setStatus("PAID");
+                bill.setPaidAt(payment.getPaymentDate() != null ? payment.getPaymentDate() : java.time.LocalDateTime.now());
                 billRepository.save(bill);
             }
             return saved;

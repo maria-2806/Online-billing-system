@@ -500,3 +500,31 @@ tr:hover td {
 .toast.error {
     border-left-color: var(--danger);
 }
+
+/* Search Controls */
+.search-container {
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.search-input {
+    max-width: 360px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: #ffffff;
+}
+
+.search-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+@media (min-width: 1024px) {
+    .payments-layout-grid {
+        grid-template-columns: 1fr 1.8fr !important;
+    }
+}

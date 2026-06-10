@@ -30,6 +30,12 @@ public class Bill {
     @Column(nullable = false)
     private String status; // PENDING, PAID, CANCELLED
 
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
+
+    @Column(name = "paid_at")
+    private java.time.LocalDateTime paidAt;
+
     @OneToMany(mappedBy = "bill", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Payment> payments;

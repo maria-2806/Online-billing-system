@@ -74,6 +74,14 @@ function switchTab(tabId, element) {
         pageTitle.textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1) + (tabId === "overview" ? " Overview" : " Management");
     }
 
+    // Clear search values when switching tabs
+    const searchCustomers = document.getElementById("searchCustomers");
+    if (searchCustomers) searchCustomers.value = "";
+    const searchInvoices = document.getElementById("searchInvoices");
+    if (searchInvoices) searchInvoices.value = "";
+    const searchPayments = document.getElementById("searchPayments");
+    if (searchPayments) searchPayments.value = "";
+
     // Load active tab data
     loadTabContent(tabId);
 }
@@ -160,6 +168,7 @@ async function loadOverviewData() {
             tr.innerHTML = `
                 <td>#${bill.id}</td>
                 <td>${bill.customerName}</td>
+                <td>${formatDate(bill.createdAt)}</td>
                 <td>${formatCurrency(bill.subtotal)}</td>
                 <td>${formatCurrency(bill.tax)}</td>
                 <td style="font-weight: 600; color: var(--text-primary);">${formatCurrency(bill.total)}</td>
@@ -193,7 +202,7 @@ async function loadCustomersData() {
                 <td style="font-weight: 600;">${c.name}</td>
                 <td>${c.email}</td>
                 <td style="text-align: right; padding-right:20px;">
-                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openEditCustomerModal(${c.id}, '${escapeHtml(c.name)}', '${escapeHtml(c.email)}')">Edit</button>
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openEditCustomerModal(${c.id}, '${escapeHtml(c.name)}', '${escapeHtml(c.email)}', '${escapeHtml(c.phone || '')}')">Edit</button>
                     <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="viewCustomerSummary(${c.id})">Summary</button>
                 </td>
             `;
@@ -223,6 +232,7 @@ async function loadInvoicesData() {
                 <td>#${bill.id}</td>
                 <td>${bill.customerId}</td>
                 <td>${bill.customerName}</td>
+                <td>${formatDate(bill.createdAt)}</td>
                 <td>${formatCurrency(bill.subtotal)}</td>
                 <td>${formatCurrency(bill.tax)}</td>
                 <td style="font-weight: 600; color: var(--text-primary);">${formatCurrency(bill.total)}</td>
@@ -239,18 +249,16 @@ async function loadInvoicesData() {
 // 4. PAYMENTS RECORD TAB
 async function loadPaymentsData() {
     try {
-        const bills = await fetch("/api/billing/invoices").then(res => res.json());
+        const [bills, payments] = await Promise.all([
+            fetch("/api/billing/invoices").then(res => res.json()),
+            fetch("/api/billing/payments").then(res => res.json())
+        ]);
+
         const select = document.getElementById("payInvoiceSelect");
         select.innerHTML = '<option value="" disabled selected>Select an unpaid invoice</option>';
 
         // Filter bills that are not fully settled or cancelled
         const unpaidBills = bills.filter(b => b.status !== "PAID" && b.status !== "CANCELLED");
-
-        if (unpaidBills.length === 0) {
-            showToast("No outstanding invoices available for payment");
-            document.getElementById("payAmountGroup").style.display = "none";
-            return;
-        }
 
         unpaidBills.forEach(b => {
             const option = document.createElement("option");
@@ -264,9 +272,40 @@ async function loadPaymentsData() {
         document.getElementById("payAmount").value = "";
         document.getElementById("payAmountHint").textContent = "";
 
+        // Build a mapping from billId to customerName
+        const billIdToCustomerName = {};
+        bills.forEach(b => {
+            billIdToCustomerName[b.id] = b.customerName;
+        });
+
+        // Render payments history table
+        const tbody = document.getElementById("paymentsHistoryTable");
+        tbody.innerHTML = "";
+
+        if (payments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No payments recorded.</td></tr>`;
+            return;
+        }
+
+        // Render in reverse order (newest first)
+        payments.slice().reverse().forEach(p => {
+            const customerName = billIdToCustomerName[p.billId] || `Invoice #${p.billId}`;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>#${p.id}</td>
+                <td>#${p.billId}</td>
+                <td style="font-weight: 600;">${customerName}</td>
+                <td>${formatDate(p.paymentDate)}</td>
+                <td style="font-weight: 600; color: var(--success);">${formatCurrency(p.amountPaid)}</td>
+                <td>${formatPaymentMethod(p.method)}</td>
+                <td><span class="badge ${getBadgeClass(p.status)}">${p.status}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
     } catch (err) {
-        console.error("Error loading bills for payment", err);
-        showToast("Failed to load invoice list for payment options", "error");
+        console.error("Error loading payments data", err);
+        showToast("Failed to load payments and invoice data", "error");
     }
 }
 
@@ -349,10 +388,11 @@ async function openCreateInvoiceModal() {
 }
 
 // Edit Customer Modal Setup
-function openEditCustomerModal(id, name, email) {
+function openEditCustomerModal(id, name, email, phone) {
     document.getElementById("editCustId").value = id;
     document.getElementById("editCustName").value = name;
     document.getElementById("editCustEmail").value = email;
+    document.getElementById("editCustPhone").value = phone || "";
     openModal("editCustomerModal");
 }
 
@@ -386,12 +426,13 @@ function setupFormHandlers() {
         e.preventDefault();
         const name = document.getElementById("custName").value.trim();
         const email = document.getElementById("custEmail").value.trim();
-
+        const phone = document.getElementById("custPhone").value.trim();
+ 
         try {
             const res = await fetch("/api/billing/customers", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email })
+                body: JSON.stringify({ name, email, phone })
             });
 
             if (!res.ok) {
@@ -415,12 +456,13 @@ function setupFormHandlers() {
         const id = document.getElementById("editCustId").value;
         const name = document.getElementById("editCustName").value.trim();
         const email = document.getElementById("editCustEmail").value.trim();
-
+        const phone = document.getElementById("editCustPhone").value.trim();
+ 
         try {
             const res = await fetch(`/api/billing/customers/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email })
+                body: JSON.stringify({ name, email, phone })
             });
 
             if (!res.ok) {
@@ -487,8 +529,10 @@ function setupFormHandlers() {
             const paymentResponse = await res.json();
             showToast(`Transaction successful! Remaining balance: ${formatCurrency(paymentResponse.remainingBalance)}`);
             
-            // Shift to invoices tab to view updated statuses
-            switchTab("invoices");
+            // Reset form, hide preview panel, and reload history
+            document.getElementById("paymentForm").reset();
+            document.getElementById("payAmountGroup").style.display = "none";
+            loadPaymentsData();
         } catch (err) {
             console.error(err);
             showToast(err.message || "Overpayment or invalid payment details", "error");
@@ -505,16 +549,24 @@ function formatCurrency(value) {
 function getBadgeClass(status) {
     switch (status) {
         case "PAID":
+        case "SUCCESS":
             return "badge-success";
         case "PARTIALLY_PAID":
             return "badge-info";
         case "CANCELLED":
+        case "FAILED":
             return "badge-danger";
         case "ISSUED":
         case "PENDING":
         default:
             return "badge-warning";
     }
+}
+
+function formatPaymentMethod(method) {
+    if (!method) return "N/A";
+    if (method === "UPI") return "UPI";
+    return method.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function escapeHtml(str) {
@@ -530,4 +582,61 @@ function escapeHtml(str) {
 function logout() {
     localStorage.clear();
     window.location.href = "index.html";
+}
+
+// Date formatter
+function formatDate(dateString) {
+    if (!dateString) return "N/A";
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+// --- FILTER / SEARCH ACTIONS ---
+
+function filterCustomersTable() {
+    const query = document.getElementById("searchCustomers").value.toLowerCase().trim();
+    const rows = document.querySelectorAll("#customersTable tr");
+    rows.forEach(row => {
+        if (row.cells.length < 3) return;
+        const name = row.cells[1]?.textContent.toLowerCase() || "";
+        const email = row.cells[2]?.textContent.toLowerCase() || "";
+        if (name.includes(query) || email.includes(query)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+function filterInvoicesTable() {
+    const query = document.getElementById("searchInvoices").value.toLowerCase().trim();
+    const rows = document.querySelectorAll("#invoicesTable tr");
+    rows.forEach(row => {
+        if (row.cells.length < 8) return;
+        const billId = row.cells[0]?.textContent.toLowerCase() || "";
+        const customerName = row.cells[2]?.textContent.toLowerCase() || "";
+        const status = row.cells[7]?.textContent.toLowerCase() || "";
+        if (billId.includes(query) || customerName.includes(query) || status.includes(query)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+function filterPaymentsTable() {
+    const query = document.getElementById("searchPayments").value.toLowerCase().trim();
+    const rows = document.querySelectorAll("#paymentsHistoryTable tr");
+    rows.forEach(row => {
+        if (row.cells.length < 7) return;
+        const paymentId = row.cells[0]?.textContent.toLowerCase() || "";
+        const customerName = row.cells[2]?.textContent.toLowerCase() || "";
+        const method = row.cells[5]?.textContent.toLowerCase() || "";
+        if (paymentId.includes(query) || customerName.includes(query) || method.includes(query)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
 }

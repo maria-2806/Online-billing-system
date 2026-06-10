@@ -39,11 +39,11 @@ public class RestDataPoolClient implements DataPoolClient {
 
     private record CustomerDto(Long id, String name, String email, String phone) {}
 
-    private record BillDto(Long id, CustomerDto customer, BigDecimal amount, String status, java.time.LocalDateTime paidAt) {}
+    private record BillDto(Long id, CustomerDto customer, BigDecimal amount, String status, java.time.LocalDateTime createdAt, java.time.LocalDateTime paidAt) {}
 
     private record BillIdDto(Long id) {}
 
-    private record PaymentDto(Long id, BillIdDto bill, BigDecimal amount, String method, String status) {}
+    private record PaymentDto(Long id, BillIdDto bill, BigDecimal amount, String method, String status, java.time.LocalDateTime paymentDate) {}
 
     private CustomerRecord toCustomerRecord(CustomerDto dto) {
         if (dto == null) return null;
@@ -68,7 +68,9 @@ public class RestDataPoolClient implements DataPoolClient {
                 subtotal,
                 tax,
                 total,
-                mapStatusToRecord(dto.status())
+                mapStatusToRecord(dto.status()),
+                dto.createdAt(),
+                dto.paidAt()
         );
     }
 
@@ -88,7 +90,8 @@ public class RestDataPoolClient implements DataPoolClient {
                 billId,
                 dto.amount(),
                 dto.method(),
-                paymentStatus
+                paymentStatus,
+                dto.paymentDate()
         );
     }
 
@@ -173,7 +176,8 @@ public class RestDataPoolClient implements DataPoolClient {
                 null,
                 billRecord.total(),
                 mapStatusToEntity(billRecord.status()),
-                null
+                billRecord.createdAt() != null ? billRecord.createdAt() : java.time.LocalDateTime.now(),
+                billRecord.paidAt()
         );
         
         HttpEntity<BillDto> requestEntity = new HttpEntity<>(requestBody, headers);
@@ -199,6 +203,7 @@ public class RestDataPoolClient implements DataPoolClient {
                 null,
                 null,
                 mapStatusToEntity(billStatus),
+                null,
                 paidAt
         );
         
@@ -245,7 +250,8 @@ public class RestDataPoolClient implements DataPoolClient {
                 null,
                 paymentRecord.amountPaid(),
                 paymentRecord.method(),
-                paymentRecord.status() != null ? paymentRecord.status().name() : "PENDING"
+                paymentRecord.status() != null ? paymentRecord.status().name() : "PENDING",
+                paymentRecord.paymentDate() != null ? paymentRecord.paymentDate() : java.time.LocalDateTime.now()
         );
         
         HttpEntity<PaymentDto> requestEntity = new HttpEntity<>(requestBody, headers);
@@ -261,8 +267,8 @@ public class RestDataPoolClient implements DataPoolClient {
 
     @Override
     @CircuitBreaker(name = "datapoolClient", fallbackMethod = "getPaymentsForBillFallback")
-    public List<PaymentRecord> getPaymentsForBill(long billId) {
-        String url = baseUrl + "/payments?billId=" + billId;
+    public List<PaymentRecord> getPaymentsForBill(Long billId) {
+        String url = baseUrl + "/payments" + (billId != null ? "?billId=" + billId : "");
         try {
             PaymentDto[] dtos = restTemplate.getForObject(url, PaymentDto[].class);
             if (dtos == null) {
@@ -293,7 +299,7 @@ public class RestDataPoolClient implements DataPoolClient {
         return null;
     }
 
-    public BillRecord updateBillStatusFallback(long billId, BillStatus billStatus, Throwable t) {
+    public BillRecord updateBillStatusFallback(long billId, BillStatus billStatus, java.time.LocalDateTime paidAt, Throwable t) {
         handleFallbackException(t);
         return null;
     }
@@ -308,7 +314,7 @@ public class RestDataPoolClient implements DataPoolClient {
         return null;
     }
 
-    public List<PaymentRecord> getPaymentsForBillFallback(long billId, Throwable t) {
+    public List<PaymentRecord> getPaymentsForBillFallback(Long billId, Throwable t) {
         handleFallbackException(t);
         return Collections.emptyList();
     }

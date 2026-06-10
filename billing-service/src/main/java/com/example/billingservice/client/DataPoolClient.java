@@ -22,7 +22,7 @@ public interface DataPoolClient {
 
     PaymentRecord savePayment(PaymentRecord paymentRecord);
 
-    List<PaymentRecord> getPaymentsForBill(long billId);
+    List<PaymentRecord> getPaymentsForBill(Long billId);
 
     List<CustomerRecord> getAllCustomers();
 

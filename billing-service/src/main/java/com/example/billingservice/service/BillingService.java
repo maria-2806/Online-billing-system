@@ -30,5 +30,5 @@ public interface BillingService {
 
     List<BillRecord> getAllBills();
 
-    List<PaymentRecord> getPaymentsForBill(long billId);
+    List<PaymentRecord> getPaymentsForBill(Long billId);
 }

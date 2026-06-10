@@ -3,7 +3,7 @@ package com.example.billingservice.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-public record CreateCustomerRequest(
+public record UpdateCustomerRequest(
         @NotBlank(message = "name is required")
         @Pattern(regexp = "^[a-zA-Z\\s'.\\-]+$", message = "name must contain only alphabetic characters, spaces, hyphens, or apostrophes (no numbers)")
         String name,

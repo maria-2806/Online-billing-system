@@ -27,6 +27,9 @@ public class BillService {
         if (bill.getStatus() == null) {
             bill.setStatus("PENDING");
         }
+        if (bill.getCreatedAt() == null) {
+            bill.setCreatedAt(java.time.LocalDateTime.now());
+        }
         return billRepository.save(bill);
     }
 
@@ -54,6 +57,13 @@ public class BillService {
             }
             if (billDetails.getStatus() != null) {
                 bill.setStatus(billDetails.getStatus());
+            }
+            if (billDetails.getPaidAt() != null) {
+                bill.setPaidAt(billDetails.getPaidAt());
+            } else if ("PAID".equalsIgnoreCase(billDetails.getStatus()) && bill.getPaidAt() == null) {
+                bill.setPaidAt(java.time.LocalDateTime.now());
+            } else if (billDetails.getStatus() != null && !"PAID".equalsIgnoreCase(billDetails.getStatus())) {
+                bill.setPaidAt(null);
             }
             return billRepository.save(bill);
         });

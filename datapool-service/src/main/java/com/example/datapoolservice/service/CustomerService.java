@@ -35,9 +35,14 @@ public class CustomerService {
 
     @Transactional
     public Optional<Customer> updateCustomer(Long id, Customer customerDetails) {
+        Optional<Customer> existing = customerRepository.findByEmail(customerDetails.getEmail());
+        if (existing.isPresent() && !existing.get().getId().equals(id)) {
+            throw new IllegalArgumentException("Customer with email " + customerDetails.getEmail() + " already exists.");
+        }
         return customerRepository.findById(id).map(customer -> {
             customer.setName(customerDetails.getName());
             customer.setEmail(customerDetails.getEmail());
+            customer.setPhone(customerDetails.getPhone());
             return customerRepository.save(customer);
         });
     }

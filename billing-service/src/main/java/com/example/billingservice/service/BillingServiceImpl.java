@@ -44,7 +44,9 @@ public class BillingServiceImpl implements BillingService {
                 subtotal,
                 tax,
                 total,
-                BillStatus.ISSUED
+                BillStatus.ISSUED,
+                java.time.LocalDateTime.now(),
+                null
         ));
 
         return new InvoiceResponse(
@@ -54,7 +56,9 @@ public class BillingServiceImpl implements BillingService {
                 savedBill.subtotal(),
                 savedBill.tax(),
                 savedBill.total(),
-                savedBill.status().name()
+                savedBill.status().name(),
+                savedBill.createdAt(),
+                savedBill.paidAt()
         );
     }
 
@@ -98,12 +102,13 @@ public class BillingServiceImpl implements BillingService {
                 bill.id(),
                 paymentAmount,
                 request.method(),
-                PaymentStatus.SUCCESS
+                PaymentStatus.SUCCESS,
+                java.time.LocalDateTime.now()
         ));
 
         BigDecimal remainingAfterPayment = scaleMoney(remainingBeforePayment.subtract(paymentAmount));
         if (remainingAfterPayment.compareTo(BigDecimal.ZERO) == 0) {
-            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PAID, java.time.LocalDateTime.now());
+            dataPoolClient.updateBillStatus(bill.id(), BillStatus.PAID, storedPayment.paymentDate());
         } else {
             dataPoolClient.updateBillStatus(bill.id(), BillStatus.PARTIALLY_PAID, null);
         }
@@ -113,7 +118,8 @@ public class BillingServiceImpl implements BillingService {
                 bill.id(),
                 paymentAmount,
                 remainingAfterPayment,
-                storedPayment.status().name()
+                storedPayment.status().name(),
+                storedPayment.paymentDate()
         );
     }
 
@@ -179,7 +185,7 @@ public class BillingServiceImpl implements BillingService {
     }
 
     @Override
-    public List<PaymentRecord> getPaymentsForBill(long billId) {
+    public List<PaymentRecord> getPaymentsForBill(Long billId) {
         return dataPoolClient.getPaymentsForBill(billId);
     }
 }

@@ -24,6 +24,9 @@ public class Customer {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column
+    private String phone;
+
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Bill> bills;
