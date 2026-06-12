@@ -69,6 +69,7 @@ public class BillingController {
         return billingService.getAllCustomers();
     }
 
+
     @PutMapping("/customers/{id}")
     public CustomerRecord updateCustomer(@PathVariable long id, @Valid @RequestBody com.example.billingservice.dto.request.UpdateCustomerRequest request) {
         CustomerRecord customer = new CustomerRecord(id, request.name(), request.email(), request.phone());
