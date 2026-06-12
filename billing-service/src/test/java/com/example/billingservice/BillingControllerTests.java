@@ -216,6 +216,15 @@ class BillingControllerTests {
         assertThat(response.body()).contains("\"phone\":\"1234567890\"");
     }
 
+    @Test
+    void getCustomerByIdReturnsCustomerDetails() throws Exception {
+        HttpResponse<String> response = sendGet("/api/billing/customers/1");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("\"id\":1");
+        assertThat(response.body()).contains("\"name\":\"John Doe\"");
+        assertThat(response.body()).contains("\"email\":\"john.doe@example.com\"");
+    }
+
     private HttpResponse<String> sendPost(String path, String body) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + path))

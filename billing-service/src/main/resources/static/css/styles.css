@@ -528,3 +528,23 @@ tr:hover td {
         grid-template-columns: 1fr 1.8fr !important;
     }
 }
+
+/* Print Styling for Native Browser Print */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #invoicePrintArea, #invoicePrintArea * {
+        visibility: visible;
+    }
+    #invoicePrintArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        box-shadow: none;
+        border: none;
+    }
+}

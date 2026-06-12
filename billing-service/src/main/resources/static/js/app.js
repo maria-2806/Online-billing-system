@@ -173,6 +173,9 @@ async function loadOverviewData() {
                 <td>${formatCurrency(bill.tax)}</td>
                 <td style="font-weight: 600; color: var(--text-primary);">${formatCurrency(bill.total)}</td>
                 <td><span class="badge ${getBadgeClass(bill.status)}">${bill.status}</span></td>
+                <td style="text-align: right; padding-right: 20px;">
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="viewInvoice(${bill.id})">View Invoice</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -237,6 +240,9 @@ async function loadInvoicesData() {
                 <td>${formatCurrency(bill.tax)}</td>
                 <td style="font-weight: 600; color: var(--text-primary);">${formatCurrency(bill.total)}</td>
                 <td><span class="badge ${getBadgeClass(bill.status)}">${bill.status}</span></td>
+                <td style="text-align: right; padding-right: 20px;">
+                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="viewInvoice(${bill.id})">View Invoice</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -640,3 +646,91 @@ function filterPaymentsTable() {
         }
     });
 }
+
+// View and Download Invoice PDF Details
+async function viewInvoice(billId) {
+    try {
+        // Fetch bill, customer and payments data in parallel
+        const bill = await fetch("/api/billing/invoices").then(r => r.json()).then(list => list.find(b => b.id == billId));
+        if (!bill) {
+            showToast("Invoice not found", "error");
+            return;
+        }
+
+        const [customer, payments] = await Promise.all([
+            fetch(`/api/billing/customers/${bill.customerId}`).then(res => res.json()),
+            fetch(`/api/billing/payments?billId=${billId}`).then(res => res.json())
+        ]);
+
+        // Calculate totals
+        const totalPaid = payments
+            .filter(p => p.status === "SUCCESS")
+            .reduce((sum, p) => sum + p.amountPaid, 0);
+        const remainingBalance = Math.max(0, bill.total - totalPaid);
+
+        // Update modal DOM elements
+        document.getElementById("invoiceDetailId").textContent = `#${bill.id}`;
+        document.getElementById("invoiceDetailDate").textContent = formatDate(bill.createdAt);
+        
+        const statusBadge = document.getElementById("invoiceDetailStatus");
+        statusBadge.textContent = bill.status;
+        statusBadge.className = `badge ${getBadgeClass(bill.status)}`;
+
+        document.getElementById("invoiceDetailCustName").textContent = customer.name;
+        document.getElementById("invoiceDetailCustId").textContent = customer.id;
+        document.getElementById("invoiceDetailCustEmail").textContent = customer.email;
+        document.getElementById("invoiceDetailCustPhone").textContent = customer.phone || 'N/A';
+
+        document.getElementById("invoiceRowSubtotal").textContent = formatCurrency(bill.subtotal);
+        document.getElementById("invoiceRowTax").textContent = formatCurrency(bill.tax);
+        document.getElementById("invoiceRowTotal").textContent = formatCurrency(bill.total);
+
+        document.getElementById("invoiceSummarySubtotal").textContent = formatCurrency(bill.subtotal);
+        document.getElementById("invoiceSummaryTax").textContent = formatCurrency(bill.tax);
+        document.getElementById("invoiceSummaryTotal").textContent = formatCurrency(bill.total);
+        document.getElementById("invoiceSummaryPaid").textContent = formatCurrency(totalPaid);
+        document.getElementById("invoiceSummaryBalance").textContent = formatCurrency(remainingBalance);
+
+        // Render payments history in invoice
+        const paymentsListContainer = document.getElementById("invoicePaymentsList");
+        paymentsListContainer.innerHTML = "";
+        const successfulPayments = payments.filter(p => p.status === "SUCCESS");
+
+        if (successfulPayments.length === 0) {
+            paymentsListContainer.innerHTML = '<p style="font-style: italic; color: var(--text-secondary);">No payments recorded yet.</p>';
+        } else {
+            successfulPayments.forEach(p => {
+                const itemDiv = document.createElement("div");
+                itemDiv.style.display = "flex";
+                itemDiv.style.justifyContent = "space-between";
+                itemDiv.style.marginBottom = "4px";
+                itemDiv.innerHTML = `
+                    <span>${formatDate(p.paymentDate)} - ${formatPaymentMethod(p.method)}</span>
+                    <span style="font-weight:600; color:var(--success);">${formatCurrency(p.amountPaid)}</span>
+                `;
+                paymentsListContainer.appendChild(itemDiv);
+            });
+        }
+
+        // Set action for download PDF
+        document.getElementById("downloadPdfBtn").onclick = () => downloadInvoicePDF(bill);
+
+        openModal("viewInvoiceModal");
+    } catch (err) {
+        console.error("Error loading invoice preview details", err);
+        showToast("Failed to fetch invoice details", "error");
+    }
+}
+
+function downloadInvoicePDF(bill) {
+    const element = document.getElementById('invoicePrintArea');
+    const opt = {
+        margin:       10,
+        filename:     `invoice_${bill.id}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+}
+

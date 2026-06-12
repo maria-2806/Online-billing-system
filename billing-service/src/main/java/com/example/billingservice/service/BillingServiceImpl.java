@@ -170,6 +170,11 @@ public class BillingServiceImpl implements BillingService {
     }
 
     @Override
+    public CustomerRecord getCustomer(long id) {
+        return dataPoolClient.getCustomer(id);
+    }
+
+    @Override
     public CustomerRecord createCustomer(CustomerRecord customer) {
         return dataPoolClient.saveCustomer(customer);
     }

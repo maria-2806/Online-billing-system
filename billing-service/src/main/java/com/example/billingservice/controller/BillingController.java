@@ -69,6 +69,10 @@ public class BillingController {
         return billingService.getAllCustomers();
     }
 
+    @GetMapping("/customers/{id}")
+    public CustomerRecord getCustomerById(@PathVariable long id) {
+        return billingService.getCustomer(id);
+    }
 
     @PutMapping("/customers/{id}")
     public CustomerRecord updateCustomer(@PathVariable long id, @Valid @RequestBody com.example.billingservice.dto.request.UpdateCustomerRequest request) {

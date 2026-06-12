@@ -24,6 +24,8 @@ public interface BillingService {
 
     List<CustomerRecord> getAllCustomers();
 
+    CustomerRecord getCustomer(long id);
+
     CustomerRecord createCustomer(CustomerRecord customer);
 
     CustomerRecord updateCustomer(long id, CustomerRecord customer);
