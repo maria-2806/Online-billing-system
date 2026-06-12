@@ -9,7 +9,7 @@ public record CreateCustomerRequest(
         String name,
 
         @NotBlank(message = "email is required")
-        @Pattern(regexp = "^(?=[0-9.]*[a-zA-Z])[a-zA-Z0-9.]+@gmail\\.com$", message = "email must be a valid Gmail address containing at least one letter (ending with @gmail.com)")
+        @Pattern(regexp = "^(?=[0-9.]*[a-zA-Z])[a-zA-Z0-9.]+@gmail\\.com$", message = "email must be a valid Gmail address containing at least one letter")
         String email,
 
         @NotBlank(message = "phone is required")
